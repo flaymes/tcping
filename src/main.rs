@@ -1,15 +1,31 @@
-use std::net::{ IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, TcpStream};
-use std::{env, thread};
+extern crate clap;
+
+use clap::Parser;
+
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, TcpStream};
+use std::{thread};
 use std::str::FromStr;
 use std::time::{Duration, Instant};
 
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    #[arg(short = '6',default_value="false",help="ping IPV6地址")]
+    v6: bool,
+    #[arg(short = 'H', long,help="远程主机地址")]
+    host: String,
+    #[arg(short, long,help="远程主机端口")]
+    port: u16,
+}
+
 fn main() {
+    // let args: Vec<String> = env::args().collect();
+    let cli = Cli::parse();
 
-    let args: Vec<String> = env::args().collect();
 
-    let parse_result = parse_args(&args);
+    let parse_result = parse_args(cli);
     if let Err(err) = parse_result {
-        eprintln!("Parse arguments failed.{}",err);
+        eprintln!("Parse arguments failed.{}", err);
         return;
     }
 
@@ -19,7 +35,6 @@ fn main() {
 }
 
 fn do_tcp_ping(ip_addr: IpAddr, ping_port: u16) {
-
     let mut ping_itr_num = 0;
 
     let addr = SocketAddr::new(ip_addr, ping_port);
@@ -70,56 +85,24 @@ fn do_tcp_ping(ip_addr: IpAddr, ping_port: u16) {
     );
 }
 
-fn parse_args(args: &Vec<String>) -> Result<(IpAddr, u16), &'static str> {
-    if args.len() < 5 {
-        eprintln!("too few arguments.{:?}", args);
-        return Err("too few arguments");
-    }
+fn parse_args(cli: Cli) -> Result<(IpAddr, u16), &'static str> {
+    let host = cli.host;
+    let port = cli.port;
 
-    let mut itr = args.iter();
-    itr.next();
-
-    let mut ipAddr = IpAddr::from_str("127.0.0.1").unwrap();
-    let mut ping_port: u16 = 80;
-    while let Some(arg) = itr.next() {
-        match arg.as_str() {
-            "-4" => {
-                // IP v4
-                let ip_str = itr.next().unwrap().as_str();
-
-                let ipv4_result = Ipv4Addr::from_str(ip_str);
-
-                if let Err(err) = ipv4_result {
-                    eprintln!("Parse IPv4 address {} failed.{}", ip_str, err);
-                    return Err("Parse IPv4 address failed.");
-                }
-                ipAddr = IpAddr::from(ipv4_result.unwrap());
-            }
-            "-6" => {
-                // IP v6
-                let ip_str = itr.next().unwrap().as_str();
-                let ipv6_resolve_result = Ipv6Addr::from_str(ip_str);
-                if let Err(err) = ipv6_resolve_result {
-                    eprintln!("Parse IPv6 address {} failed.{}", ip_str, err);
-                    return Err("Parse IPv6 address failed.");
-                }
-                ipAddr = IpAddr::from(ipv6_resolve_result.unwrap());
-            }
-            "-p" => {
-                // destination port
-                let port_str = itr.next().unwrap().as_str();
-                let port_result = port_str.parse::<u16>();
-                if let Err(err) = port_result {
-                    eprintln!("Parse port {} failed. err = {}", port_str, err);
-                    return Err("Parse port failed.");
-                }
-                ping_port = port_result.unwrap();
-            }
-            _ => {}
+    if cli.v6  {
+        let ipv6_resolve_result = Ipv6Addr::from_str(host.as_str());
+        if let Err(err) = ipv6_resolve_result {
+            eprintln!("Parse IPv6 address {} failed.{}", host, err);
+            return Err("Parse IPv6 address failed.");
         }
+        return Ok((IpAddr::from(ipv6_resolve_result.unwrap()), port));
+    } else {
+        let ipv4_result = Ipv4Addr::from_str(host.as_str());
+
+        if let Err(err) = ipv4_result {
+            eprintln!("Parse IPv4 address {} failed.{}", host, err);
+            return Err("Parse IPv4 address failed.");
+        }
+        return Ok((IpAddr::from(ipv4_result.unwrap()), port));
     }
-
-    println!("IP:{}, port:{}", ipAddr.to_string(), ping_port);
-
-    Ok((ipAddr,ping_port))
 }
