@@ -20,4 +20,11 @@ cargo build --release
 ./tcping -6 -H 2a00:1450:400e:810::200e -p 80
 
 ```
+### ping IPv4 address
+```shell
+# tcp ping IPv4 address, interval 3s and 20 iterations 
+./tcping -H 39.156.66.10 -p 80 -n 20 -i 3
+```
+
+
 
