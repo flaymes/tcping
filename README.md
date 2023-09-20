@@ -1,5 +1,13 @@
 # tcping
 A simple tcp ping tool.
+
+## Build
+```shell
+git clone https://github.com/flaymes/tcping.git
+cd ~/tcping
+cargo build --release
+```
+
 ## Usage:
 ### ping IPv4 address
 ```shell
