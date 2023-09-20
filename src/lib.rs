@@ -30,47 +30,39 @@ pub struct Cli {
 }
 
 pub fn do_tcp_ping(ip_addr: IpAddr, ping_port: u16, interval: u64, ping_count: u32) {
-    let mut ping_itr_num: u32 = 0;
-
     let addr = SocketAddr::new(ip_addr, ping_port);
-    let mut min_latency: f32 = f32::MAX;
-    let mut max_latency: f32 = f32::MIN;
-    let mut avg_latency: f32 = 0.0f32;
-    loop {
-        {
-            // TCP connect
-            let start_time = Instant::now();
-            let conn_some = TcpStream::connect(addr);
-            if let Err(_) = conn_some {
-                eprintln!("Failed connect to {} !", addr.to_string());
-                return;
-            }
+    let mut min_latency = f64::MAX;
+    let mut max_latency = f64::MIN;
 
-            let end_time = Instant::now();
-            let duration = end_time - start_time;
-            let latency = duration.as_secs_f32() * 1000f32; // ms
-            println!("TCP ping elapsed {:.3} ms", latency);
-            let min_cmp_some = latency.partial_cmp(&min_latency);
+    let mut rtts: Vec<f64> = Vec::new();
 
-            if let Some(std::cmp::Ordering::Less) = min_cmp_some {
-                min_latency = latency;
-            }
-
-            let max_cmp_some = latency.partial_cmp(&max_latency);
-            if let Some(std::cmp::Ordering::Greater) = max_cmp_some {
-                max_latency = latency;
-            }
-
-            avg_latency += latency;
-        } // auto close stream
-
-        ping_itr_num += 1;
-        if ping_itr_num >= ping_count {
-            break;
+    for i in 0..ping_count {
+        let start_time = Instant::now();
+        let conn_some = TcpStream::connect(addr);
+        if let Err(_) = conn_some {
+            eprintln!("Failed connect to {} !", addr.to_string());
+            return;
         }
+        let duration = start_time.elapsed();
+        let rtt = duration.as_secs_f64() * 1000f64; // ms
+        println!("TCP ping elapsed {:.3} ms", rtt);
+
+        if let Some(std::cmp::Ordering::Less) = rtt.partial_cmp(&min_latency) {
+            min_latency = rtt;
+        }
+
+        if let Some(std::cmp::Ordering::Greater) = rtt.partial_cmp(&max_latency) {
+            max_latency = rtt;
+        }
+
+        rtts.push(rtt);
+
         thread::sleep(Duration::from_secs(interval));
     }
-    avg_latency = avg_latency / (ping_itr_num as f32);
+
+    let rtt_sum: f64 = rtts.iter().sum();
+
+    let avg_latency = rtt_sum / (ping_count as f64);
 
     println!(
         "tcp ping min/avg/max = {:.3}/{:.3}/{:.3} ms",
