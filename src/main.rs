@@ -3,25 +3,24 @@ extern crate clap;
 use clap::Parser;
 
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, TcpStream};
-use std::{thread};
 use std::str::FromStr;
+use std::thread;
 use std::time::{Duration, Instant};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-    #[arg(short = '6',default_value="false",help="ping IPV6地址")]
+    #[arg(short = '6', default_value = "false", help = "ping IPV6 address")]
     v6: bool,
-    #[arg(short = 'H', long,help="远程主机地址")]
+    #[arg(short = 'H', long, help = "remote host ip address")]
     host: String,
-    #[arg(short, long,help="远程主机端口")]
+    #[arg(short, long, help = "remote host ping port")]
     port: u16,
 }
 
 fn main() {
     // let args: Vec<String> = env::args().collect();
     let cli = Cli::parse();
-
 
     let parse_result = parse_args(cli);
     if let Err(err) = parse_result {
@@ -89,7 +88,7 @@ fn parse_args(cli: Cli) -> Result<(IpAddr, u16), &'static str> {
     let host = cli.host;
     let port = cli.port;
 
-    if cli.v6  {
+    if cli.v6 {
         let ipv6_resolve_result = Ipv6Addr::from_str(host.as_str());
         if let Err(err) = ipv6_resolve_result {
             eprintln!("Parse IPv6 address {} failed.{}", host, err);
